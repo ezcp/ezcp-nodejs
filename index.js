@@ -6,75 +6,61 @@ const request = require("request")
 
 var silent = false;
 
+var program = require('commander')
+program
+	.version(package.version)
+	.option('-h, --host <host>', 'target hostname', process.env.EZHOST || 'https://ezcp.io')
+	.option("-s, --silent", "silent mode", false)
+
+isStatusOK = (statuscode) => {
+	return (200 <= statuscode && statuscode < 300)
+}
 
 upload = (filestream, token) => {
-	const purl = `${program.host}:${program.port}/upload/${token}`
+	const purl = `${program.host}/upload/${token}`
 	filestream.pipe(request.post(purl, (err, res, body) => {
-		if (err) process.exit(1)
-		if (!silent) console.log(res.statusCode)
-		process.exit(0)
+		if (err) {
+			console.error("ezcp upload:", err)
+			process.exit(1)
+		}
+		else if (!isStatusOK(res.statusCode)) {
+			console.error("ezcp upload status:", res.statusCode)
+			process.exit(1)
+		}
+		else process.exit(0)
 	}))
 }
 
 download = (filestream, token) => {
-	const durl = `${program.host}:${program.port}/download/${token}`
+	const durl = `${program.host}/download/${token}`
 	request(durl)
-		.on('response', function (response) {
-			if (!silent) console.log(response.statusCode)
+		.on('response', (res) => {
+			if (!isStatusOK(res.statusCode)) {
+				console.error("ezcp download status:", res.statusCode)
+				process.exit(1)
+			}
 		})
-		.on('error', function (err) {
-			if (!silent) console.log(err)
+		.on('error', (err) => {
+			console.error("ezcp download:", err)
+			process.exit(1)
 		})
 		.pipe(filestream)
 }
 
 gettoken = () => {
-	const turl = `${program.host}:${program.port}/token`
+	const turl = `${program.host}/`
 	request.get(turl, (err, res, body) => {
-		if (body) {
-			const resp = JSON.parse(body)
-			console.log(resp.token)
+		if (err) {
+			console.log("ezcp token:", err)
+		} else if (!isStatusOK(res.statusCode)) {
+			console.error("ezcp token status:", res.statusCode)
+		} else if (body) {
+			console.log(body)
+		} else {
+			console.error("ezcp token invalid")
 		}
 	})
 }
-
-var program = require('commander')
-program
-	.version(package.version)
-	.option('-h, --host <host>', 'target hostname', 'http://localhost')
-	.option('-p, --port <port>', 'port number', 4200)
-
-program
-	.command('put <path> <token>')
-	.description('upload file to server')
-	.option("-s, --silent", "silent mode", false)
-	.action((fpath, token, options) => {
-		fs.access(fpath, fs.R_OK, (err) => {
-			if (err) return console.log("can't acces to file", fpath)
-			console.log(`upload file ${fpath} to ${program.host}:${program.port} at ${token}`);
-			const fstream = fs.createReadStream(fpath)
-			upload(fstream, token)
-		});
-	})
-
-program
-	.command('get <token> <path>')
-	.description('download file from server')
-	.option("-s, --silent", "silent mode", false)
-	.action((token, fpath, options) => {
-		console.log(`download file to ${fpath} from ${program.host}:${program.port} `);
-		const fstream = fs.createWriteStream(fpath)
-		download(fstream, token)
-	})
-
-program
-	.command('token')
-	.description('get new token')
-	.option("-s, --silent", "silent mode", false)
-	.action((token, options) => {
-		console.log(`get new token} from ${program.host}:${program.port} `);
-		gettoken()
-	})
 
 program.parse(process.argv)
 
@@ -83,7 +69,6 @@ if (program.args.Command == null) {
 		gettoken()
 	} else if (program.args.length == 1) {
 		if (process.stdin.isTTY) {
-			silent = true;
 			const token = program.args[0]
 			download(process.stdout, token)
 		} else {
@@ -97,6 +82,7 @@ if (program.args.Command == null) {
 				const fpath = program.args[1]
 				const token = program.args[0]
 				const fstream = fs.createWriteStream(fpath)
+				fstream.on("destination path error:", (err) => console.error(err))
 				download(fstream, token)
 			} else {
 				const fpath = program.args[0]
@@ -107,29 +93,3 @@ if (program.args.Command == null) {
 		})
 	}
 }
-
-
-/** 
-
-
-							const url = `${program.host}:${program.port}/download/${param}`
-				
-				process.stdout.resume();
-
-				request(url)
-				.on('response', function (response) {
-					console.log(response.statusCode)
-					console.log(response.headers) 
-				})
-				.pipe(process.stdout)
-
-
-				process.stdin.resume();
-				uplod
-				process.stdin.pipe(request.post(url, option, (err, res, body) => {
-					if (err) process.exit(1)
-					console.log(body)
-					process.exit(0)
-				}))
-
-				**/
