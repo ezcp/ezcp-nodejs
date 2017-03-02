@@ -1,10 +1,7 @@
 
 const package = require('./package.json')
 const fs = require("fs")
-const http = require("https")
 const request = require("request")
-
-var silent = false;
 
 var program = require('commander')
 program
@@ -21,32 +18,36 @@ isSHA1Token = (token) => {
 }
 
 upload = (filestream, token) => {
-	filestream.pipe(request.post(`${program.host}/upload/${token}`, (err, res, body) => {
-		if (err) {
-			console.error("ezcp upload:", err)
-			process.exit(1)
-		}
-		else if (!isStatusOK(res.statusCode)) {
-			console.error("ezcp upload status:", res.statusCode)
-			process.exit(1)
-		}
-		else process.exit(0)
-	}))
-}
-
-download = (filestream, token) => {
-	request.get(`${program.host}/download/${token}`)
+	filestream.pipe(
+		request.post(`${program.host}/upload/${token}`)
 		.on('response', (res) => {
 			if (!isStatusOK(res.statusCode)) {
-				console.error("ezcp download status:", res.statusCode)
+				console.error("ezcp upload status:", res.statusCode)
 				process.exit(1)
 			}
 		})
 		.on('error', (err) => {
-			console.error("ezcp download:", err)
+			console.error("ezcp upload:", err)
 			process.exit(1)
 		})
-		.pipe(filestream)
+	)
+	.on('error', (err) => console.error("ezcp upload:", err))
+
+}
+
+download = (filestream, token) => {
+	request.get(`${program.host}/download/${token}`)
+	.on('response', (res) => {
+		if (!isStatusOK(res.statusCode)) {
+			console.error("ezcp download status:", res.statusCode)
+			process.exit(1)
+		}
+	})
+	.on('error', (err) => {
+		console.error("ezcp download:", err)
+		process.exit(1)
+	})
+	.pipe(filestream)
 }
 
 gettoken = () => {
@@ -91,13 +92,12 @@ if (program.args.Command == null) {
 			const fpath = arg1
 			const token = arg0
 			const fstream = fs.createWriteStream(fpath)
-			fstream.on("error" , (err) => console.error("destination path error:", err))
 			download(fstream, token)
 		} else if(!isSHA1Token(arg0) && isSHA1Token(arg1)) {
-				const fpath = arg0
-				const token = arg1
-				const fstream = fs.createReadStream(fpath)
-				upload(fstream, token)
+			const fpath = arg0
+			const token = arg1
+			const fstream = fs.createReadStream(fpath)
+			upload(fstream, token)
 		} else {
 			console.error("token not found")
 		}
