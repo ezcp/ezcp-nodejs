@@ -16,9 +16,12 @@ isStatusOK = (statuscode) => {
 	return (200 <= statuscode && statuscode < 300)
 }
 
+isSHA1Token = (token) => {
+	return token.match(/^[0-9a-f]{40}$/) != null
+}
+
 upload = (filestream, token) => {
-	const purl = `${program.host}/upload/${token}`
-	filestream.pipe(request.post(purl, (err, res, body) => {
+	filestream.pipe(request.post(`${program.host}/upload/${token}`, (err, res, body) => {
 		if (err) {
 			console.error("ezcp upload:", err)
 			process.exit(1)
@@ -32,8 +35,7 @@ upload = (filestream, token) => {
 }
 
 download = (filestream, token) => {
-	const durl = `${program.host}/download/${token}`
-	request(durl)
+	request.get(`${program.host}/download/${token}`)
 		.on('response', (res) => {
 			if (!isStatusOK(res.statusCode)) {
 				console.error("ezcp download status:", res.statusCode)
@@ -48,8 +50,7 @@ download = (filestream, token) => {
 }
 
 gettoken = () => {
-	const turl = `${program.host}/`
-	request.get(turl, (err, res, body) => {
+	request.post(`${program.host}/token`, (err, res, body) => {
 		if (err) {
 			console.log("ezcp token:", err)
 		} else if (!isStatusOK(res.statusCode)) {
@@ -70,26 +71,35 @@ if (program.args.Command == null) {
 	} else if (program.args.length == 1) {
 		if (process.stdin.isTTY) {
 			const token = program.args[0]
-			download(process.stdout, token)
+			if(isSHA1Token(token))
+				download(process.stdout, token)
+			else 
+				console.error(`${token} is not a valid token`)
 		} else {
 			const token = program.args[0]
-			process.stdin.resume()
-			upload(process.stdin, token)
+			if(isSHA1Token(token)) {
+				process.stdin.resume()
+				upload(process.stdin, token)
+			}
+			else 
+				console.error(`${token} is not a valid token`)
 		}
 	} else if (program.args.length == 2) {
-		fs.access(program.args[0], fs.R_OK, (err) => {
-			if (err) {
-				const fpath = program.args[1]
-				const token = program.args[0]
-				const fstream = fs.createWriteStream(fpath)
-				fstream.on("destination path error:", (err) => console.error(err))
-				download(fstream, token)
-			} else {
-				const fpath = program.args[0]
-				const token = program.args[1]
+		const arg0 = program.args[0]
+		const arg1 = program.args[1]
+		if (isSHA1Token(arg0) && !isSHA1Token(arg1)) {
+			const fpath = arg1
+			const token = arg0
+			const fstream = fs.createWriteStream(fpath)
+			fstream.on("error" , (err) => console.error("destination path error:", err))
+			download(fstream, token)
+		} else if(!isSHA1Token(arg0) && isSHA1Token(arg1)) {
+				const fpath = arg0
+				const token = arg1
 				const fstream = fs.createReadStream(fpath)
 				upload(fstream, token)
-			}
-		})
+		} else {
+			console.error("token not found")
+		}
 	}
 }
