@@ -19,13 +19,17 @@ program.on('--help', ()=>{
 	console.log("    ezcp --bitcoin                   get address for paiement")
 	console.log("    ezcp --login <transactionId>     retreive a token and store it")
 	console.log("    ezcp <filepath>                  if <filepath> exists, upload the file using the previously stored token")
-	console.log("                                     if <filepath> doesn't exist, download the file pointed by previously stored token ")
-	console.log("    ezcp <filepath>                  if <filepath> exists, upload the file using the previously stored token")
-	console.log("                                     if <filepath> doesn't exist, download the file pointed by previously stored token ")
+	console.log("                                     if <filepath> doesn't exist, download the file pointed by previously stored token")
 
-	console.log("  Free usage:\n")
+	console.log("\n  Free usage:\n")
 	console.log("    ezcp <filepath> <token>          upload the file using a free token get thanks to the website http://ezcp.io")
 	console.log("    ezcp <token> <filepath>          download the file pointed by the token ")
+
+	console.log("\n  More usage:\n")
+	console.log("    cat <file> | ezcp               upload the piped file")
+	console.log("    ezcp > file                     download the file to the redirected pipe ")
+	console.log('    ezcp -x "pass phrase" <file>    upload/download the file with encryption')
+
 });
 
 const algorithm = 'aes-256-ctr'
@@ -111,15 +115,22 @@ gettoken = () => {
 }
 
 getBitcoinAddr = () => {
-	request.post(`https://ezcp.io/bitcoin`, (err, res, body) => {
-		if (err) {
-			console.log("ezcp bitcoin:", err)
-		} else if (!isStatusOK(res.statusCode)) {
-			console.error("ezcp bitcoin status:", res.statusCode, body)
-		} else if (body) {
-			console.log("Please make your paiement at : "+body)
+	fs.readFile(`${os.homedir()}/.ezcp-bitcoin`, (err, bitcoinAddress)=>{
+		if (err || !bitcoinAddress) {
+			request.post(`https://ezcp.io/bitcoin`, (err, res, body) => {
+				if (err) {
+					console.log("ezcp bitcoin:", err)
+				} else if (!isStatusOK(res.statusCode)) {
+					console.error("ezcp bitcoin status:", res.statusCode, body)
+				} else if (body) {
+					console.log("Please make your 0.01 BTC paiement to: "+body)
+					fs.writeFileSync(`${os.homedir()}/.ezcp-bitcoin`, body)
+				} else {
+					console.error("ezcp bitcoin unknown err")
+				}
+			})
 		} else {
-			console.error("ezcp bitcoin unknown err")
+			console.log("Please make your 0.01 BTC paiement to: "+bitcoinAddress)
 		}
 	})
 }
