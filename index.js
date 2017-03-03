@@ -9,9 +9,24 @@ const program = require('commander')
 
 program
 	.version(package.version)
+	.option("-b, --bitcoin", "return a bitcoin address for registration")
 	.option("-x, --passphrase <passphrase>", "encrypt / decrypt file")
 	.option("-l, --login <txid>", "register user and set a durable token")
 	.parse(process.argv)
+
+program.on('--help', ()=>{
+	console.log("  Premium usage:\n")
+	console.log("    ezcp --bitcoin                   get address for paiement")
+	console.log("    ezcp --login <transactionId>     retreive a token and store it")
+	console.log("    ezcp <filepath>                  if <filepath> exists, upload the file using the previously stored token")
+	console.log("                                     if <filepath> doesn't exist, download the file pointed by previously stored token ")
+	console.log("    ezcp <filepath>                  if <filepath> exists, upload the file using the previously stored token")
+	console.log("                                     if <filepath> doesn't exist, download the file pointed by previously stored token ")
+
+	console.log("  Free usage:\n")
+	console.log("    ezcp <filepath> <token>          upload the file using a free token get thanks to the website http://ezcp.io")
+	console.log("    ezcp <token> <filepath>          download the file pointed by the token ")
+});
 
 const algorithm = 'aes-256-ctr'
 var encrypt = null
@@ -81,7 +96,6 @@ download = (filestream, token) => {
 }
 
 gettoken = () => {
-	console.log(program.login)
 	request.post(`https://ezcp.io/token/${program.login}`, (err, res, body) => {
 		if (err) {
 			console.log("ezcp login:", err)
@@ -96,77 +110,92 @@ gettoken = () => {
 	})
 }
 
+getBitcoinAddr = () => {
+	request.post(`https://ezcp.io/bitcoin`, (err, res, body) => {
+		if (err) {
+			console.log("ezcp bitcoin:", err)
+		} else if (!isStatusOK(res.statusCode)) {
+			console.error("ezcp bitcoin status:", res.statusCode, body)
+		} else if (body) {
+			console.log("Please make your paiement at : "+body)
+		} else {
+			console.error("ezcp bitcoin unknown err")
+		}
+	})
+}
+
 /*
  * command line parsing
  */
 
-if (program.args.Command == null) {
-	if (!program.args.length) {
-		if (program.login) {
-			gettoken()
-		} else if (process.stdin.isTTY && process.stdout.isTTY) {
-			program.help()
-		} else if (process.stdin.isTTY) {
-			// download piped
-			var token = getDurableToken()
-			if (token)
-				download(process.stdout, token)
-			else 
-				console.error("You have to login first!")
-		} else if (process.stdout.isTTY) {
-			// upload piped
-			var token = getDurableToken()
-			if (token)
-				upload(process.stdin, token)
-			else
-				console.error("You have to login first!")				
-		}
-	} else if (program.args.length == 1) {
-		var durableToken = getDurableToken()
-		if (process.stdin.isTTY && process.stdout.isTTY && durableToken) {
-			// registered user shortcut
-			const fpath = program.args[0]
-			fs.stat(fpath, (err, stats)=>{
-				if (stats && stats.isFile) {
-					// upload mode
-					const fstream = fs.createReadStream(fpath)
-					upload(fstream, durableToken)
-				} else {
-					// download mode
-					const fstream = fs.createWriteStream(fpath)
-					download(fstream, durableToken)
-				}
-			})
-		} else if (process.stdin.isTTY) {
-			const token = program.args[0]
-			if(isSHA1Token(token))
-				download(process.stdout, token)
-			else 
-				console.error(`${token} is not a valid token`)
-		} else {
-			const token = program.args[0]
-			if(isSHA1Token(token)) {
-				process.stdin.resume()
-				upload(process.stdin, token)
+if (program.bitcoin) {
+	getBitcoinAddr()
+} else if (!program.args.length) {
+	if (program.login) {
+		gettoken()
+	} else if (process.stdin.isTTY && process.stdout.isTTY) {
+		program.help()
+	} else if (process.stdin.isTTY) {
+		// download piped
+		var token = getDurableToken()
+		if (token)
+			download(process.stdout, token)
+		else 
+			console.error("You have to login first!")
+	} else if (process.stdout.isTTY) {
+		// upload piped
+		var token = getDurableToken()
+		if (token)
+			upload(process.stdin, token)
+		else
+			console.error("You have to login first!")				
+	}
+} else if (program.args.length == 1) {
+	var durableToken = getDurableToken()
+	if (process.stdin.isTTY && process.stdout.isTTY && durableToken) {
+		// registered user shortcut
+		const fpath = program.args[0]
+		fs.stat(fpath, (err, stats)=>{
+			if (stats && stats.isFile) {
+				// upload mode
+				const fstream = fs.createReadStream(fpath)
+				upload(fstream, durableToken)
+			} else {
+				// download mode
+				const fstream = fs.createWriteStream(fpath)
+				download(fstream, durableToken)
 			}
-			else 
-				console.error(`${token} is not a valid token`)
+		})
+	} else if (process.stdin.isTTY) {
+		const token = program.args[0]
+		if(isSHA1Token(token))
+			download(process.stdout, token)
+		else 
+			console.error(`${token} is not a valid token`)
+	} else {
+		const token = program.args[0]
+		if(isSHA1Token(token)) {
+			process.stdin.resume()
+			upload(process.stdin, token)
 		}
-	} else if (program.args.length == 2) {
-		const arg0 = program.args[0]
-		const arg1 = program.args[1]
-		if (isSHA1Token(arg0) && !isSHA1Token(arg1)) {
-			const fpath = arg1
-			const token = arg0
-			const fstream = fs.createWriteStream(fpath)
-			download(fstream, token)
-		} else if(!isSHA1Token(arg0) && isSHA1Token(arg1)) {
-			const fpath = arg0
-			const token = arg1
-			const fstream = fs.createReadStream(fpath)
-			upload(fstream, token)
-		} else {
-			console.error("token not found")
-		}
+		else 
+			console.error(`${token} is not a valid token`)
+	}
+} else if (program.args.length == 2) {
+	const arg0 = program.args[0]
+	const arg1 = program.args[1]
+	if (isSHA1Token(arg0) && !isSHA1Token(arg1)) {
+		const fpath = arg1
+		const token = arg0
+		const fstream = fs.createWriteStream(fpath)
+		download(fstream, token)
+	} else if(!isSHA1Token(arg0) && isSHA1Token(arg1)) {
+		const fpath = arg0
+		const token = arg1
+		const fstream = fs.createReadStream(fpath)
+		upload(fstream, token)
+	} else {
+		console.error("token not found")
 	}
 }
+
