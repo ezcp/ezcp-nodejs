@@ -107,7 +107,7 @@ gettoken = () => {
 			console.error("ezcp login status:", res.statusCode, body)
 		} else if (body) {
 			fs.writeFileSync(os.homedir() + "/.ezcp-token", body)
-			console.log(body)
+			console.log("Here's your permanent token: "+ body)
 		} else {
 			console.error("ezcp invalid login")
 		}
