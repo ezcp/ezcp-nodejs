@@ -49,6 +49,10 @@ if (program.passphrase) {
  * core methods
  */
 
+urlFromToken = (route, token) => {
+	return `https://api${token[0].toString()}.ezcp.io/${route}/${token}`
+}
+
 isStatusOK = (statuscode) => {
 	return (200 <= statuscode && statuscode < 300)
 }
@@ -58,8 +62,9 @@ isSHA1Token = (token) => {
 }
 
 getDurableToken = () => {
+	
 	try {
-		return  fs.readFileSync(os.homedir()+"/.ezcp-token")
+		return  fs.readFileSync(os.homedir()+"/.ezcp-token").toString()
 	} catch (err) {
 		if (err.code !== 'ENOENT') throw err;
 		return ""
@@ -68,7 +73,7 @@ getDurableToken = () => {
 
 upload = (filestream, token) => {
 	filestream.pipe(encrypt).pipe(
-		request.post(`https://ezcp.io/upload/${token}`)
+		request.post(urlFromToken("upload", token))
 		.on('response', (res) => {
 			if (!isStatusOK(res.statusCode)) {
 				console.error("ezcp upload status:", res.statusCode, body)
@@ -84,7 +89,7 @@ upload = (filestream, token) => {
 }
 
 download = (filestream, token) => {
-	request.get(`https://ezcp.io/download/${token}`)
+	request.get(urlFromToken("download", token))
 	.on('response', (res) => {
 		if (!isStatusOK(res.statusCode)) {
 			console.error("ezcp download status:", res.statusCode, body)
