@@ -1,3 +1,15 @@
+```
+                     _       
+                    (_)      
+  ___ _______ _ __   _  ___  
+ / _ \_  / __| '_ \ | |/ _ \ 
+|  __// / (__| |_) || | (_) |
+ \___/___\___| .__(_)_|\___/ 
+             | |             
+             |_|             			
+
+```
+
 # What's EZCP
 
 *EZCP works like a clipboard*: you Copy something to it from machine A, and you Paste it on machine B.
@@ -14,22 +26,28 @@ There are two ways to get the EZCP command line tool: Go, and Node.js.
 
 Some prefer a single binary compiled for their platform, others like Node.js better.
 
-### You can install the following *Go* binaries
-
-- for linux, [https://get.ezcp.io/linux/ezcp](https://get.ezcp.io/linux/ezcp)
-- for osx, [https://get.ezcp.io/osx/ezcp](https://get.ezcp.io/osx/ezcp)
-- for windows, [https://get.ezcp.io/windows/ezcp](https://get.ezcp.io/windows/ezcp)
-
-Open the link in a navigator, or use `wget` or `curl`, then copy the file somewhere 
-in your path.
-
-### Or the Node.js version
+### You can install the Node.js version
 
 The Node.js install is even easier if you already have Node.js installed.
 
 `npm install -g ezcp`
 
 Then you can use the `ezcp` command.
+
+### Or You can install the following *Go* binaries
+
+- for linux, [https://ezcp.io/linux](https://ezcp.io/linux)
+- for osx, [https://ezcp.io/osx](https://ezcp.io/osx)
+- for windows, [https://ezcp.io/windows](https://ezcp.io/windows)
+
+Open the link in a navigator, or use `wget` or `curl`, then copy the file somewhere 
+in your path.
+
+Or build it yourself from the source:
+
+```
+go get github.com/ezcp/ezcp-go
+```
 
 # Using: Novice
 
