@@ -1,5 +1,5 @@
 
-const package = require('./package.json')
+const packageInfo = require('./package.json')
 const fs = require("fs")
 const request = require("request")
 const os = require("os")
@@ -8,7 +8,7 @@ const Transform = require('stream').Transform;
 const program = require('commander')
 
 program
-	.version(package.version)
+	.version(packageInfo.version)
 	.option("-b, --bitcoin", "return a bitcoin address for registration")
 	.option("-x, --passphrase <passphrase>", "encrypt / decrypt file")
 	.option("-l, --login <txid>", "register user and set a durable token")
@@ -62,12 +62,11 @@ isSHA1Token = (token) => {
 }
 
 getDurableToken = () => {
-	
 	try {
 		return  fs.readFileSync(os.homedir()+"/.ezcp-token").toString()
 	} catch (err) {
 		if (err.code !== 'ENOENT') throw err;
-		return ""
+		return null
 	}
 }
 
