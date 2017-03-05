@@ -4,7 +4,6 @@ const fs = require("fs")
 const request = require("request")
 const os = require("os")
 const crypto = require('crypto')
-const Transform = require('stream').Transform;
 const program = require('commander')
 
 program
@@ -40,14 +39,21 @@ if (program.passphrase) {
 	encrypt = crypto.createCipher(algorithm, program.passphrase)
 	decrypt = crypto.createDecipher(algorithm, program.passphrase)
 } else {
-	// create identity transform
-	encrypt = new Transform({ transform(chunk, encoding, callback) {callback(null, chunk) }});
-	decrypt = new Transform({ transform(chunk, encoding, callback) {callback(null, chunk) }});
+	var Stream = require('stream');
+	encrypt = new Stream.PassThrough();
+	decrypt = new Stream.PassThrough();
 }
 
 /*
  * core methods
  */
+
+homedir = function () {
+	if (Number(process.versions.node.split('.')[0]) < 6)
+		return process.env.HOME || process.env.USERPROFILE;
+	else
+		return os.homedir()
+}
 
 urlFromToken = (route, token) => {
 	return `https://api${token[0].toString()}.ezcp.io/${route}/${token}`
@@ -63,7 +69,7 @@ isSHA1Token = (token) => {
 
 getDurableToken = () => {
 	try {
-		return  fs.readFileSync(os.homedir()+"/.ezcp-token").toString()
+		return  fs.readFileSync(homedir()+"/.ezcp-token").toString()
 	} catch (err) {
 		if (err.code !== 'ENOENT') throw err;
 		return null
@@ -110,7 +116,7 @@ gettoken = () => {
 		} else if (!isStatusOK(res.statusCode)) {
 			console.error("ezcp login status:", res.statusCode, body)
 		} else if (body) {
-			fs.writeFileSync(os.homedir() + "/.ezcp-token", body)
+			fs.writeFileSync(homedir() + "/.ezcp-token", body)
 			console.log("Here's your permanent token: "+ body)
 		} else {
 			console.error("ezcp invalid login")
@@ -119,7 +125,7 @@ gettoken = () => {
 }
 
 getBitcoinAddr = () => {
-	fs.readFile(`${os.homedir()}/.ezcp-bitcoin`, (err, bitcoinAddress)=>{
+	fs.readFile(`${homedir()}/.ezcp-bitcoin`, (err, bitcoinAddress)=>{
 		if (err || !bitcoinAddress) {
 			request.post(`https://ezcp.io/bitcoin`, (err, res, body) => {
 				if (err) {
@@ -128,7 +134,7 @@ getBitcoinAddr = () => {
 					console.error("ezcp bitcoin status:", res.statusCode, body)
 				} else if (body) {
 					console.log("Please make your 0.01 BTC paiement to: "+body)
-					fs.writeFileSync(`${os.homedir()}/.ezcp-bitcoin`, body)
+					fs.writeFileSync(`${homedir()}/.ezcp-bitcoin`, body)
 				} else {
 					console.error("ezcp bitcoin unknown err")
 				}
