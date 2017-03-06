@@ -1,17 +1,21 @@
 {
-  "name": "ezcp-client",
+  "name": "ezcp",
   "version": "1.0.0",
-  "description": "ezcp client",
-  "main": "index.js",
+  "description": "ezcp.io command line tool",
+  "main": "./dist/index.js",
   "bin": {
     "ezcp": "./bin/ezcp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ezcp/ezcp-nodejs.git"
   },
   "scripts": {
     "start": "babel-node lib/index.js",
     "build": "babel lib -d dist"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "info@ezcp.io",
+  "license": "MIT",
   "dependencies": {
     "commander": "^2.9.0",
     "request": "^2.79.0"
